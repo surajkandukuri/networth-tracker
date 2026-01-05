@@ -9,21 +9,21 @@ email:
   to_env: "EMAIL_TO"
 
 real_estate:
- primary_home:
+  primary_home:
     county: collin
     mode: cad_times_hpi
     address_text: "1504 Shetland Dr, Allen, TX"
     ownership_pct: 1.0
     fallback_value: 786000
 
-   cedar_hill_commercial:
+  cedar_hill_commercial:
     county: dallas
     mode: inflation_ish
     address_text: "638 Uptown Blvd, Cedar Hill, TX"
     ownership_pct: 0.24
     fallback_value: 3033333
 
- celina_land:
+  celina_land:
     county: collin
     mode: fallback_only
     point:
@@ -32,14 +32,14 @@ real_estate:
     ownership_pct: 1.0
     notes: "1 share, ~1.32 acres"
     fallback_value: 305000
- hpi:
-    region: "DFW"
-    max_qoq_change_pct: 5
- assumptions:
-   inflation_qoq_pct: 0.5
-   hpi_qoq_pct: 0.0
 
+hpi:
+  region: "DFW"
+  max_qoq_change_pct: 5
 
+assumptions:
+  inflation_qoq_pct: 0.5
+  hpi_qoq_pct: 0.0
 
 chart:
   # Email #2 behavior: show 2 points (prior quarter -> current quarter).
