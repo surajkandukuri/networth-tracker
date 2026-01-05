@@ -46,22 +46,41 @@ def run():
 
     # 1) Fetch the 3 real-estate market values (free public endpoints)
     re_cfg = cfg.raw["real_estate"]
+    latest_snapshot = _load_latest_snapshot()
 
-    primary_home = get_ccad_market_by_address(
-        re_cfg["primary_home"]["ccad_address"]["street_num"],
-        re_cfg["primary_home"]["ccad_address"]["street_name_like"],
-        re_cfg["primary_home"]["ccad_address"]["city"],
+    def _with_fallback(key: str, fetcher):
+        try:
+            return fetcher()
+        except Exception as exc:  # noqa: BLE001
+            if latest_snapshot and "real_estate" in latest_snapshot and key in latest_snapshot["real_estate"]:
+                print(f"WARN: using fallback snapshot for {key} due to error: {exc}")
+                return latest_snapshot["real_estate"][key]
+            raise
+
+    primary_home = _with_fallback(
+        "primary_home",
+        lambda: get_ccad_market_by_address(
+            re_cfg["primary_home"]["ccad_address"]["street_num"],
+            re_cfg["primary_home"]["ccad_address"]["street_name_like"],
+            re_cfg["primary_home"]["ccad_address"]["city"],
+        ),
     )
 
-    cedar_hill = get_dallas_mkt_value_by_address(
-        re_cfg["cedar_hill_commercial"]["dallas_address"]["street_num"],
-        re_cfg["cedar_hill_commercial"]["dallas_address"]["street_name_like"],
-        re_cfg["cedar_hill_commercial"]["dallas_address"]["city"],
+    cedar_hill = _with_fallback(
+        "cedar_hill_commercial",
+        lambda: get_dallas_mkt_value_by_address(
+            re_cfg["cedar_hill_commercial"]["dallas_address"]["street_num"],
+            re_cfg["cedar_hill_commercial"]["dallas_address"]["street_name_like"],
+            re_cfg["cedar_hill_commercial"]["dallas_address"]["city"],
+        ),
     )
 
-    celina = get_ccad_market_by_point(
-        re_cfg["celina_land"]["ccad_point"]["lat"],
-        re_cfg["celina_land"]["ccad_point"]["lon"],
+    celina = _with_fallback(
+        "celina_land",
+        lambda: get_ccad_market_by_point(
+            re_cfg["celina_land"]["ccad_point"]["lat"],
+            re_cfg["celina_land"]["ccad_point"]["lon"],
+        ),
     )
 
     # 2) Build/update snapshot (stores values so next quarter chart has 2 points automatically)
