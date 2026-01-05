@@ -32,10 +32,13 @@ real_estate:
     ownership_pct: 1.0
     notes: "1 share, ~1.32 acres"
     fallback_value: 305000
-
  hpi:
-  region: "DFW"
-  max_qoq_change_pct: 5
+    region: "DFW"
+    max_qoq_change_pct: 5
+ assumptions:
+   inflation_qoq_pct: 0.5
+   hpi_qoq_pct: 0.0
+
 
 
 chart:
