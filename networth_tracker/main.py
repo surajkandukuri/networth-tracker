@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from networth_tracker.config import load_config
-from networth_tracker.template import render_email_html
+from networth_tracker.template import build_email_html
 from networth_tracker.chart import build_simple_line_chart
-from networth_tracker.gmail_api import send_email_with_inline_image
+from networth_tracker.gmail_api import send_email_html_with_inline_image
 
 
 SNAPSHOT_DIR = Path("snapshots")
@@ -154,8 +154,16 @@ def _compute_qoq_changes(real_estate: Dict[str, RealEstateValue], latest_snapsho
     return qoq_changes
 
 
+def _owned_value(real_estate: Dict[str, RealEstateValue], key: str) -> float:
+    val = real_estate.get(key)
+    if isinstance(val, RealEstateValue):
+        return float(val.owned_value)
+    return 0.0
+
+
 def run() -> None:
-    cfg = load_config("config.yaml")
+    cfg_obj = load_config("config.yaml")
+    cfg = cfg_obj.raw
 
     # 0) Dry-run flag
     dry_run = bool((cfg.get("run", {}) or {}).get("dry_run", False))
@@ -180,7 +188,15 @@ def run() -> None:
     chart_path = build_simple_line_chart(cfg, latest_snapshot)
 
     # 6) Render frozen email HTML (inject real estate values + QoQ deltas)
-    email_html = render_email_html(cfg, real_estate, qoq_changes)
+    email_html = build_email_html(
+        qoq_growth="+3.1%",
+        yoy_growth="*N/A (need 4 quarters)*",
+        since_start="+6.6%",
+        chart_cid="networth_chart",
+        primary_home_value=_owned_value(real_estate, "primary_home"),
+        cedar_hill_value=_owned_value(real_estate, "cedar_hill_commercial"),
+        celina_land_value=_owned_value(real_estate, "celina_land"),
+    )
 
     if dry_run:
         # In dry-run mode, do not send email. Keep artifact for debugging if needed.
@@ -193,10 +209,13 @@ def run() -> None:
     # 7) Send email
     subject = cfg["email"]["subject"]
     from_addr = cfg["email"]["from"]
+    to_addr = cfg_obj.env_email_to()
 
-    send_email_with_inline_image(
+    send_email_html_with_inline_image(
         subject=subject,
+        sender=from_addr,
+        to=to_addr,
         html_body=email_html,
-        inline_image_path=chart_path,
-        from_addr=from_addr,
+        inline_png_path=chart_path,
+        inline_cid="networth_chart",
     )
