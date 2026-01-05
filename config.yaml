@@ -1,0 +1,48 @@
+run:
+  timezone: "America/Chicago"
+  # If true, the workflow will build the email but NOT send it.
+  dry_run: false
+
+email:
+  subject: "NET WORTH TRACKER — QUARTERLY SNAPSHOT"
+  from: "surajkandukuri@gmail.com"
+  to_env: "EMAIL_TO"
+
+real_estate:
+  primary_home:
+    name: "Primary Home"
+    owner: "Parents"
+    ccad_address:
+      street_num: "1504"
+      street_name_like: "SHETLAND"
+      city: "ALLEN"
+
+  cedar_hill_commercial:
+    name: "Cedar Hill Commercial Property"
+    owner: "Parents"
+    dallas_address:
+      street_num: "638"
+      street_name_like: "UPTOWN"
+      city: "CEDAR HILL"
+
+  celina_land:
+    name: "Celina Land"
+    owner: "Parents"
+    ccad_point:
+      lat: 33.307941
+      lon: -96.7699589
+
+chart:
+  # Email #2 behavior: show 2 points (prior quarter -> current quarter).
+  # The script stores snapshots to keep this automatic.
+  series:
+    - name: "Parents DCA"
+      target_year: 2063
+    - name: "Kid 1"
+      target_year: 2034
+    - name: "Kid 2"
+      target_year: 2039
+
+# NOTE:
+# For now, securities + other non-API numbers are taken from the frozen SAMPLE template inside code.
+# We will wire securities APIs next (M1/Fidelity/Robinhood etc.) without changing the email structure.
