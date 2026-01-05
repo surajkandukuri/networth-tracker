@@ -10,27 +10,33 @@ email:
 
 real_estate:
   primary_home:
-    name: "Primary Home"
-    owner: "Parents"
-    ccad_address:
-      street_num: "1504"
-      street_name_like: "SHETLAND"
-      city: "ALLEN"
+    county: collin
+    mode: cad_times_hpi
+    address_text: "1504 Shetland Dr, Allen, TX"
+    ownership_pct: 1.0
+    fallback_value: 786000
 
   cedar_hill_commercial:
-    name: "Cedar Hill Commercial Property"
-    owner: "Parents"
-    dallas_address:
-      street_num: "638"
-      street_name_like: "UPTOWN"
-      city: "CEDAR HILL"
+    county: dallas
+    mode: inflation_ish
+    address_text: "638 Uptown Blvd, Cedar Hill, TX"
+    ownership_pct: 0.24
+    fallback_value: 3033333
 
   celina_land:
-    name: "Celina Land"
-    owner: "Parents"
-    ccad_point:
+    county: collin
+    mode: fallback_only
+    point:
       lat: 33.307941
       lon: -96.7699589
+    ownership_pct: 1.0
+    notes: "1 share, ~1.32 acres"
+    fallback_value: 305000
+
+hpi:
+  region: "DFW"
+  max_qoq_change_pct: 5
+
 
 chart:
   # Email #2 behavior: show 2 points (prior quarter -> current quarter).
