@@ -23,3 +23,8 @@ class Config:
         if not val:
             raise RuntimeError(f"Missing env var {key} (set GitHub secret {key}).")
         return val
+
+
+# ✅ compatibility wrapper expected by main.py
+def load_config(path: str = "config.yaml") -> Config:
+    return Config.load(path)
