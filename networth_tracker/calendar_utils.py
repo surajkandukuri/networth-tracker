@@ -35,10 +35,22 @@ def fetch_trading_days(
     end: date,
     ticker: str = "SPY",
     buffer_days: int = 7,
-) -> List[date]:
+) -> list[date]:
     if start > end:
         return []
+
+    today = date.today()
+
+    # 🔑 FUTURE QUARTER: do NOT call Yahoo
+    if start > today:
+        return [
+            d.date()
+            for d in pd.bdate_range(start=start, end=end)
+        ]
+
+    # Past / current dates → Yahoo is OK
     end_with_buffer = end + timedelta(days=buffer_days + 1)
+
     data = yf.download(
         tickers=ticker,
         start=start.isoformat(),
@@ -48,12 +60,13 @@ def fetch_trading_days(
         progress=False,
         group_by="column",
     )
+
     if data.empty:
         raise ValueError(
             f"No trading data returned for {ticker} between {start} and {end}."
         )
-    trading_days = sorted({idx.date() for idx in data.index})
-    return trading_days
+
+    return sorted(idx.date() for idx in data.index)
 
 
 def shift_wednesdays_to_trading_days(

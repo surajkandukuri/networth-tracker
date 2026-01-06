@@ -21,12 +21,13 @@ ALLOWED_TYPES = {"Active", "NoMoreFunding"}
 
 ALIAS_MAP = {
     "for": "owner_bucket",
-    "category": "account_name",
+    "category": "type",                  # <-- funding status (Active / NoMoreFunding)
+    "type": "account_name",              # <-- account type (Rollover 401k, Roth IRA, etc)
     "symbol": "security",
     "quantity": "starting_quantity",
     "weekly_investment_in_dollars": "weekly_investment_dollars",
-    "type": "type",
 }
+
 
 
 @dataclass(frozen=True)
@@ -67,19 +68,18 @@ def _strip_string_columns(df: pd.DataFrame) -> pd.DataFrame:
 def _validate_required_values(df: pd.DataFrame) -> None:
     errors: list[str] = []
 
+    # 1) Required non-empty text columns
     for col in ("owner_bucket", "account_name", "security", "type"):
         blank_mask = df[col].isna() | (df[col].astype(str).str.strip() == "")
         if blank_mask.any():
             rows = _one_based_rows(blank_mask)
             errors.append(f"Blank values in '{col}' at rows: {rows}")
 
-    for col in ("starting_quantity", "weekly_investment_dollars"):
-        df[col] = pd.to_numeric(df[col], errors="coerce")
-        bad_mask = df[col].isna()
-        if bad_mask.any():
-            rows = _one_based_rows(bad_mask)
-            errors.append(f"Non-numeric values in '{col}' at rows: {rows}")
+    # If we already have missing "type", don't try further type-dependent checks
+    # but we can still validate numeric fields safely.
+    df["type"] = df["type"].astype(str).str.strip()
 
+    # 2) Validate type values
     bad_type_mask = ~df["type"].isin(ALLOWED_TYPES)
     if bad_type_mask.any():
         rows = _one_based_rows(bad_type_mask)
@@ -88,8 +88,32 @@ def _validate_required_values(df: pd.DataFrame) -> None:
             f"{rows}"
         )
 
+    # 3) starting_quantity must always be numeric
+    df["starting_quantity"] = pd.to_numeric(df["starting_quantity"], errors="coerce")
+    bad_qty_mask = df["starting_quantity"].isna()
+    if bad_qty_mask.any():
+        rows = _one_based_rows(bad_qty_mask)
+        errors.append(f"Non-numeric values in 'starting_quantity' at rows: {rows}")
+
+    # 4) weekly_investment_dollars: numeric REQUIRED only for Active
+    df["weekly_investment_dollars"] = pd.to_numeric(
+        df["weekly_investment_dollars"], errors="coerce"
+    )
+
+    active_mask = df["type"] == "Active"
+    bad_weekly_active_mask = active_mask & df["weekly_investment_dollars"].isna()
+    if bad_weekly_active_mask.any():
+        rows = _one_based_rows(bad_weekly_active_mask)
+        errors.append(
+            "Non-numeric/blank values in 'weekly_investment_dollars' for Active rows at rows: "
+            f"{rows}"
+        )
+
     if errors:
-        raise ValueError("Securities_Master.xlsx validation failed:\n- " + "\n- ".join(errors))
+        raise ValueError(
+            "Securities_Master.xlsx validation failed:\n- " + "\n- ".join(errors)
+        )
+
 
 
 def _one_based_rows(mask: Iterable[bool]) -> str:

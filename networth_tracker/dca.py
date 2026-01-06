@@ -38,9 +38,11 @@ def build_dca_schedule(
         raise ValueError(f"Missing required columns for DCA: {', '.join(missing)}")
 
     wednesdays = list_wednesdays(quarter_start, quarter_end)
+    proxy_ticker = str(df["security"].dropna().astype(str).iloc[0]).strip() if not df.empty else "SPY"
     trading_days = fetch_trading_days(
-        start=min(wednesdays),
-        end=max(wednesdays),
+            start=min(wednesdays),
+            end=max(wednesdays),
+            ticker=proxy_ticker,
     ) if wednesdays else []
     adjusted = shift_wednesdays_to_trading_days(wednesdays, trading_days)
 

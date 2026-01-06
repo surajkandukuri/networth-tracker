@@ -2,9 +2,9 @@ run:
   timezone: "America/Chicago"
   # If true, the workflow will build the email but NOT send it.
   dry_run: false
-  
+
 inputs:
-  securities_master_path: inputs/Securities_Master.xlsx
+  securities_master_path: input/Securities_Master.xlsx
 
 email:
   subject: "NET WORTH TRACKER — QUARTERLY SNAPSHOT"

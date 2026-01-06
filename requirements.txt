@@ -1,5 +1,7 @@
+
 PyYAML==6.0.2
-matplotlib==3.9.2
-pandas==2.2.2
+matplotlib==3.7.5
+pandas==2.0.3
 openpyxl==3.1.5
 yfinance==0.2.41
+multitasking==0.0.11
