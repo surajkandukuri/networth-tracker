@@ -118,3 +118,49 @@ def fetch_close_prices(
         resolved_dates[original] = source_dates[mapped]
 
     return PricingResult(prices=prices, source_dates=resolved_dates)
+
+
+def fetch_close_price_panel(
+    tickers: list[str],
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    unique_tickers = _dedupe_and_strip(tickers)
+    if not unique_tickers:
+        raise ValueError("No tickers provided for price panel.")
+
+    normalized = [normalize_ticker(t) for t in unique_tickers]
+    end_with_buffer = end_date + timedelta(days=1)
+
+    data = yf.download(
+        tickers=sorted(set(normalized)),
+        start=start_date.isoformat(),
+        end=end_with_buffer.isoformat(),
+        interval="1d",
+        auto_adjust=False,
+        progress=False,
+        group_by="column",
+    )
+
+    if data.empty:
+        raise ValueError(
+            f"No price data returned for window {start_date} to {end_date} from Yahoo."
+        )
+
+    if isinstance(data, pd.Series):
+        close_series = data.dropna()
+        if close_series.empty:
+            raise ValueError("Yahoo response missing Close data for price panel.")
+        df = close_series.to_frame(name=normalized[0])
+    elif isinstance(data.columns, pd.MultiIndex):
+        if "Close" not in data.columns.get_level_values(0):
+            raise ValueError("Yahoo response missing Close column for multi-ticker request.")
+        df = data["Close"].copy()
+    else:
+        if "Close" not in data.columns:
+            raise ValueError("Yahoo response missing Close column for single-ticker request.")
+        df = data[["Close"]].copy()
+        df.columns = [normalized[0]]
+
+    df.index = [idx.date() for idx in df.index]
+    return df
