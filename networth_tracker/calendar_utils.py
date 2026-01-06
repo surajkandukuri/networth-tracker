@@ -4,7 +4,9 @@ from bisect import bisect_right
 from datetime import date, timedelta
 from typing import List
 
-import yfinance as yf
+import pandas as pd
+
+from .pricing import fetch_close_price_panel
 
 
 def get_quarter_bounds(dt: date) -> tuple[date, date]:
@@ -48,25 +50,13 @@ def fetch_trading_days(
             for d in pd.bdate_range(start=start, end=end)
         ]
 
-    # Past / current dates → Yahoo is OK
-    end_with_buffer = end + timedelta(days=buffer_days + 1)
-
-    data = yf.download(
-        tickers=ticker,
-        start=start.isoformat(),
-        end=end_with_buffer.isoformat(),
-        interval="1d",
-        auto_adjust=False,
-        progress=False,
-        group_by="column",
-    )
-
-    if data.empty:
+    price_end = end + timedelta(days=buffer_days)
+    panel = fetch_close_price_panel([ticker], start, price_end)
+    if panel.empty:
         raise ValueError(
-            f"No trading data returned for {ticker} between {start} and {end}."
+            f"No trading data returned for {ticker} between {start} and {price_end}."
         )
-
-    return sorted(idx.date() for idx in data.index)
+    return sorted(panel.index)
 
 
 def shift_wednesdays_to_trading_days(

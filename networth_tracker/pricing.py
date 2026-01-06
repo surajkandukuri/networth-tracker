@@ -5,6 +5,10 @@ from datetime import date, datetime, timedelta
 from typing import Dict, Iterable, List
 
 import pandas as pd
+try:
+    from pandas_datareader import data as pdr
+except Exception:
+    pdr = None
 import yfinance as yf
 
 
@@ -132,35 +136,74 @@ def fetch_close_price_panel(
     normalized = [normalize_ticker(t) for t in unique_tickers]
     end_with_buffer = end_date + timedelta(days=1)
 
-    data = yf.download(
-        tickers=sorted(set(normalized)),
-        start=start_date.isoformat(),
-        end=end_with_buffer.isoformat(),
-        interval="1d",
-        auto_adjust=False,
-        progress=False,
-        group_by="column",
-    )
-
-    if data.empty:
-        raise ValueError(
-            f"No price data returned for window {start_date} to {end_date} from Yahoo."
+    def _fetch_with_yahoo() -> pd.DataFrame:
+        data = yf.download(
+            tickers=sorted(set(normalized)),
+            start=start_date.isoformat(),
+            end=end_with_buffer.isoformat(),
+            interval="1d",
+            auto_adjust=False,
+            progress=False,
+            group_by="column",
         )
 
-    if isinstance(data, pd.Series):
-        close_series = data.dropna()
-        if close_series.empty:
-            raise ValueError("Yahoo response missing Close data for price panel.")
-        df = close_series.to_frame(name=normalized[0])
-    elif isinstance(data.columns, pd.MultiIndex):
-        if "Close" not in data.columns.get_level_values(0):
-            raise ValueError("Yahoo response missing Close column for multi-ticker request.")
-        df = data["Close"].copy()
-    else:
-        if "Close" not in data.columns:
-            raise ValueError("Yahoo response missing Close column for single-ticker request.")
-        df = data[["Close"]].copy()
-        df.columns = [normalized[0]]
+        if data.empty:
+            raise ValueError("Yahoo returned empty dataset.")
 
-    df.index = [idx.date() for idx in df.index]
+        if isinstance(data, pd.Series):
+            close_series = data.dropna()
+            if close_series.empty:
+                raise ValueError("Yahoo response missing Close data for price panel.")
+            df = close_series.to_frame(name=normalized[0])
+        elif isinstance(data.columns, pd.MultiIndex):
+            if "Close" not in data.columns.get_level_values(0):
+                raise ValueError("Yahoo response missing Close column for multi-ticker request.")
+            df = data["Close"].copy()
+        else:
+            if "Close" not in data.columns:
+                raise ValueError("Yahoo response missing Close column for single-ticker request.")
+            df = data[["Close"]].copy()
+            df.columns = [normalized[0]]
+
+    def _fetch_with_stooq() -> pd.DataFrame:
+        if pdr is None:
+            raise ValueError(
+                "pandas_datareader is not installed; install it with "
+                "'pip install pandas-datareader' to enable Stooq fallback."
+            )
+        frames = {}
+        for ticker in sorted(set(normalized)):
+            stooq_ticker = f"{ticker}.us"
+            try:
+                data = pdr.DataReader(stooq_ticker, "stooq", start_date, end_with_buffer)
+            except Exception:
+                # Skip tickers that fail to fetch from Stooq
+                continue
+            if data.empty or "Close" not in data.columns:
+                continue
+            close = data["Close"].copy()
+            close.index = [idx.date() for idx in close.index]
+            frames[ticker] = close
+        if not frames:
+            raise ValueError("Stooq returned empty dataset.")
+        df = pd.DataFrame(frames)
+        return df
+
+    try:
+        df = _fetch_with_yahoo()
+    except Exception:
+        try:
+            df = _fetch_with_stooq()
+        except Exception as exc:
+            raise ValueError(
+                f"Failed to fetch close prices for {start_date} to {end_date} "
+                f"from Yahoo or Stooq for tickers: {', '.join(sorted(set(normalized)))}"
+            ) from exc
+
+    if df.empty:
+        raise ValueError(
+            f"Price panel is empty for {start_date} to {end_date} "
+            f"with tickers: {', '.join(sorted(set(normalized)))}"
+        )
+
     return df

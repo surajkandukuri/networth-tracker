@@ -5,3 +5,4 @@ pandas==2.0.3
 openpyxl==3.1.5
 yfinance==0.2.41
 multitasking==0.0.11
+pandas-datareader==0.10.0
